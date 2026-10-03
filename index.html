@@ -4,13 +4,21 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>annagram</title>
-  <meta name="description" content="A character-level language model of Anna, trained on her own writing. Runs in your browser.">
+  <meta name="description" content="A tiny n-gram model trained on my own text.">
+  <meta property="og:title" content="annagram">
+  <meta property="og:description" content="A tiny n-gram model trained on my own text.">
+  <meta property="og:url" content="https://gram.brezgis.com/">
+  <meta property="og:image" content="https://gram.brezgis.com/assets/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="A pixel portrait of Anna next to a speech bubble that says: I see. You can click a profile. It has everything.">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,600;0,700;1,400&family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script type="module" src="app.js"></script>
 </head>
@@ -28,31 +36,64 @@
         <div class="skull"></div>
       </div>
 
-      <section class="bubble" aria-label="What Anna says">
-        <svg class="tail tail-side" aria-hidden="true"></svg>
-        <svg class="tail tail-up" aria-hidden="true"></svg>
-        <p id="output" class="output" aria-live="polite"></p>
-      </section>
-    </div>
-
-    <div class="controls">
-      <button id="rand" class="rand" type="button">[rand]</button>
-      <label class="given-line">
-        <span>[given]:</span>
-        <input id="prompt" type="text" autocomplete="off" spellcheck="false" placeholder="type a few words, press Enter">
-      </label>
+      <div class="speech">
+        <section class="bubble" aria-label="What Anna says">
+          <svg class="tail tail-side" aria-hidden="true"></svg>
+          <svg class="tail tail-up" aria-hidden="true"></svg>
+          <p id="output" class="output" aria-live="polite"></p>
+        </section>
+        <div class="side controls" data-mode="rand">
+          <button id="rand" class="rand" type="button">[rand]</button>
+          <label class="given-line">
+            <span class="given-tag">[given]:</span>
+            <input id="prompt" type="text" autocomplete="off" spellcheck="false" placeholder=" " aria-label="Start a sentence and press Enter">
+            <span class="cursor" aria-hidden="true">▍</span>
+          </label>
+        </div>
+      </div>
     </div>
 
     <section class="about" aria-labelledby="how">
       <h2 id="how">how it works</h2>
+      <div class="about-grid">
+        <div class="about-text">
+      <h3>what it is</h3>
       <p>annagram is a tiny character-level language model built on my text: an interpolated Kneser–Ney n-gram model trained on about 37,000 words of my messages to coding agents, my notes, and my blog posts. It runs entirely in your browser, and I’ll add more text as I write it.</p>
-      <p>It writes one character at a time. To pick the next one, it looks at the last 9 characters and counts what I’ve typed after exactly those 9. If I’ve rarely written that stretch, it backs off to the last 8, then 7, and so on, blending the counts so it never runs out of ideas. <b>[rand]</b> (or the space bar, or poking me) starts from nothing; type in <b>[given]</b> and it continues from your words.</p>
-      <ul class="key">
-        <li><span class="k guess">a</span> a guess: it had to back off to a short stretch</li>
-        <li><span class="k known">a</span> familiar: I’ve typed those 9 characters before</li>
-        <li><span class="k sig">a</span> signature me: I type that stretch all the time</li>
-      </ul>
+      <h3>how it picks a letter</h3>
+      <p>It writes one character at a time. To pick the next one, it looks at the last 9 characters and counts what I’ve typed after exactly those 9. If I’ve rarely written that stretch, it backs off to the last 8, then 7, and so on, blending the counts so it never runs out of ideas. Gray letters came from a short stretch, solid ones from a familiar one, and pink ones from a stretch I type all the time.</p>
+      <p><b>[rand]</b>, the space bar, or poking me starts from nothing; type in <b>[given]</b> and it continues from your words.</p>
+      <details class="math">
+        <summary><span class="show">[show the math]</span><span class="hide">[hide the math]</span></summary>
+        <div class="eq-card">
+          <p class="eq" aria-label="P of c given h equals the maximum of N of h c minus D, and zero, over N of h, plus lambda of h times P of c given h prime">
+            <i>P</i>(<i>c</i> | <i>h</i>) =
+            <span class="frac"><span>max(<i>N</i>(<i>hc</i>) − <i>D</i>, 0)</span><span><i>N</i>(<i>h</i>)</span></span>
+            <span class="nobr">+ <i>λ</i>(<i>h</i>) <i>P</i>(<i>c</i> | <i>h′</i>)</span>
+          </p>
+          <dl class="eq-key">
+            <dt><i>c</i></dt><dd>next character</dd>
+            <dt><i>h</i></dt><dd>context: the preceding 9 characters</dd>
+            <dt><i>h′</i></dt><dd><i>h</i> without its first character (order 8, then 7, … down to uniform)</dd>
+            <dt><i>N</i>(<i>hc</i>)</dt><dd>count of <i>hc</i> in the corpus at the top order; at lower orders, the continuation count |{<i>v</i> : <i>N</i>(<i>vhc</i>) &gt; 0}|</dd>
+            <dt><i>N</i>(<i>h</i>)</dt><dd>Σ<sub><i>c</i></sub> <i>N</i>(<i>hc</i>)</dd>
+            <dt><i>D</i></dt><dd>absolute discount per order, <i>n</i>₁ / (<i>n</i>₁ + 2<i>n</i>₂)</dd>
+            <dt><i>λ</i>(<i>h</i>)</dt><dd>backoff weight, <i>D</i> · |{<i>c</i> : <i>N</i>(<i>hc</i>) &gt; 0}| / <i>N</i>(<i>h</i>)</dd>
+          </dl>
+        </div>
+      </details>
+      <h3>what it leaves out</h3>
       <p>Before training I scrubbed names, links, and anything personal (the black bars are what got redacted) and pruned long phrases I only wrote once. It also refuses to quote me more than seven words in a row.</p>
+        </div>
+        <figure class="inspector" aria-live="polite">
+          <figcaption>
+            <span id="fig-math" class="insp-math"></span>
+            <span class="insp-pick">sampled <i>c</i> = <b id="fig-letter"></b></span>
+          </figcaption>
+          <p id="fig-class" class="insp-class"></p>
+          <div id="fig-bars" class="bars" role="list"></div>
+          <p class="insp-hint">top 6 by model probability, before sampling adjustments. Hover over (or tap) a letter to see its context <i>h</i> and its distribution.</p>
+        </figure>
+      </div>
     </section>
   </main>
 </body>

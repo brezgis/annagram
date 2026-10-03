@@ -9,32 +9,34 @@
   --tail-top: calc(3 * var(--u));
   --tail-center: calc(7.5 * var(--u));         /* middle row of the tail drawn in app.js */
 
+  /* Four roles: background, primary, secondary, pink. Everything else aliases them. */
   --room: #f1f1f4;
   --text: #24242b;
-  --muted: #64646f;
-  --fill: #ffffff;
-  --ink: #24242b;
-  --guess: #b4b4bd;                            /* letters she was guessing */
-  --known: #24242b;                            /* letters from a long stretch of Anna */
-  --pink: #d6187f;                             /* signature Anna */
+  --muted: #686875;
+  --pink: #d6187f;
+  --fill: #ffffff;                             /* the bubble's surface */
+  --ink: var(--text);
+  --guess: var(--muted);                       /* letters she was guessing */
+  --known: var(--text);                        /* letters from a long stretch of Anna */
   --logo: url("assets/logo-ink.png");
 
-  --body-font: "Courier Prime", "Courier New", monospace;
-  --say-font: "Pixelify Sans", "Courier New", monospace;
-  --say-size: calc(7 * var(--u));
-  --say-line: calc(11 * var(--u));
+  --body-font: "IBM Plex Mono", ui-monospace, "Courier New", monospace;
+  --say-font: "Pixelify Sans", "IBM Plex Mono", monospace;
+  --say-size: calc(8 * var(--u));
+  --say-line: calc(12 * var(--u));
+  --logo-u: 2px;                               /* the logo's own pixel; smaller than --u on purpose */
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --room: #18181c; --text: #e8e8ee; --muted: #9a9aa6; --fill: #232329; --ink: #e8e8ee;
-    --guess: #6b6b78; --known: #e8e8ee; --pink: #ff5fae; --logo: url("assets/logo-pale.png");
+    --room: #18181c; --text: #e8e8ee; --muted: #9a9aa6; --pink: #ff5fae; --fill: #232329;
+    --logo: url("assets/logo-pale.png");
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --room: #18181c; --text: #e8e8ee; --muted: #9a9aa6; --fill: #232329; --ink: #e8e8ee;
-  --guess: #6b6b78; --known: #e8e8ee; --pink: #ff5fae; --logo: url("assets/logo-pale.png");
+  --room: #18181c; --text: #e8e8ee; --muted: #9a9aa6; --pink: #ff5fae; --fill: #232329;
+  --logo: url("assets/logo-pale.png");
   color-scheme: dark;
 }
 
@@ -46,7 +48,7 @@ body {
   color: var(--text);
   font: 400 1rem/1.55 var(--body-font);
 }
-main { max-width: 64rem; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+main { max-width: 64rem; margin: 0 auto; padding: 1rem 1rem 4rem; }
 :focus-visible { outline: 2px solid var(--pink); outline-offset: 2px; }
 .visually-hidden {
   position: absolute; width: 1px; height: 1px; overflow: hidden;
@@ -54,11 +56,11 @@ main { max-width: 64rem; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
 }
 
 /* ---- logo: ink pixel art; the cursor makes the letters shimmer pink (canvas, app.js) ---- */
-.logo { margin: 1rem 0 1.5rem; display: flex; justify-content: center; }
+.logo { margin: 0.25rem 0 0.5rem; display: flex; justify-content: center; }
 .logo-img {
   position: relative;
   display: block;
-  width: calc(232 * var(--u));
+  width: calc(232 * var(--logo-u));
   max-width: 100%;
   aspect-ratio: 232 / 45;
   background: var(--logo) center / contain no-repeat;
@@ -68,16 +70,23 @@ main { max-width: 64rem; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
 .logo-img canvas {
   position: absolute; inset: 0; width: 100%; height: 100%;
   image-rendering: pixelated;
-  filter: drop-shadow(0 0 calc(2 * var(--u)) rgb(255 60 160 / 0.55));   /* the glow around lit letters */
 }
 
 /* ---- stage ---- */
+/* Two columns: Anna, then the letter inspector, on the left; the bubble, then its
+   key and controls, on the right. */
 .stage {
   display: grid;
   grid-template-columns: var(--sprite) minmax(0, 1fr);
+  grid-template-areas: "anna speech";
   column-gap: calc(16 * var(--u));
+  row-gap: calc(8 * var(--u));
   align-items: start;
 }
+.anna { grid-area: anna; }
+/* The bubble and its controls are one column, so the controls hang right off the
+   bubble however long the speech gets. */
+.speech { grid-area: speech; min-width: 0; }
 
 /* ---- Anna: a cut-out puppet hinged at the mouth ---- */
 .anna { position: relative; width: var(--sprite); height: var(--sprite); cursor: pointer; }
@@ -141,37 +150,42 @@ main { max-width: 64rem; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
 }
 .tok.redacted { color: transparent; background: var(--text); }
 
-/* ---- controls: [rand] and the [given] line ---- */
+/* ---- under the bubble: [rand] and [given]: ---- */
+.side { min-width: 0; margin: calc(9 * var(--u)) calc(2 * var(--u)) 0; }
+
 .controls {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0.75rem 1.5rem;
-  margin: calc(10 * var(--u)) 0 0 calc(var(--sprite) + 16 * var(--u));
   font: 700 1.05rem/1.2 var(--body-font);   /* the pixel font draws [ ] like ( ) */
 }
-.rand {
+.rand, .given-tag {
   font: inherit;
   color: var(--pink);
   background: none;
   border: 0;
-  padding: 0;
-  cursor: pointer;
+  padding: 0.1rem 0.3rem;
+  margin: 0 -0.3rem;
 }
+.rand { cursor: pointer; }
 .rand:hover { text-decoration: underline; text-decoration-thickness: var(--u); text-underline-offset: 0.2em; }
+/* The mode that made the current speech is filled in, like a lit key. */
+.controls[data-mode="rand"] .rand, .controls[data-mode="given"] .given-tag { background: var(--pink); color: var(--fill); text-decoration: none; }
 /* [given]: is a prompt living inside its own underlined line, not a button. */
 .given-line {
   flex: 1;
   display: flex;
   align-items: baseline;
   gap: 1ch;
-  min-width: 16rem;
+  min-width: 14rem;
   border-bottom: var(--u) solid var(--guess);
   padding-bottom: 0.15rem;
   font-weight: 400;
   color: var(--muted);
   cursor: text;
 }
+.given-tag { font-weight: 700; color: var(--muted); }
 .given-line:focus-within { border-bottom-color: var(--pink); }
 .given-line input {
   flex: 1;
@@ -183,25 +197,91 @@ main { max-width: 64rem; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
   padding: 0;
 }
 .given-line input:focus { outline: none; }
-.given-line input::placeholder { color: var(--muted); opacity: 0.6; }
+.given-line input::placeholder { color: transparent; }
+.given-line input { caret-color: var(--pink); }
+.given-line .cursor { display: none; order: 1; color: var(--muted); font-weight: 400; pointer-events: none; }
+.given-line input { order: 2; }
+.given-line:has(input:placeholder-shown:not(:focus)) .cursor { display: inline; }
 
-/* ---- how it works ---- */
-.about { max-width: 42rem; margin-top: 4rem; font-size: 0.92rem; color: var(--muted); }
-.about h2 { margin: 0 0 0.75rem; font: 600 calc(7 * var(--u))/1.2 var(--say-font); color: var(--text); }
-.about p { margin: 0 0 1rem; }
+
+/* ---- letter inspector: P(c | h) for the last (or hovered) letter ---- */
+.tok { cursor: crosshair; }
+.tok.in-ctx { background: color-mix(in srgb, var(--pink) 14%, transparent); }   /* h */
+.tok.inspected { background: color-mix(in srgb, var(--pink) 38%, transparent); } /* c */
+.inspector { margin: 0; font-size: 0.8rem; color: var(--muted); }
+.inspector figcaption { display: grid; gap: 0.1rem; margin-bottom: 0.6rem; }
+.insp-math { font: 400 0.95rem/1.4 var(--body-font); color: var(--text); overflow-wrap: anywhere; }
+.insp-math i { font-style: italic; }
+.insp-pick b { font: 600 1.05rem/1 var(--say-font); color: var(--text); }
+.insp-pick b.sig { color: var(--pink); }
+.insp-class { margin: 0 0 0.6rem; color: var(--text); }
+.insp-class b { font-weight: 700; }
+.insp-class b.guess { color: var(--muted); }
+.insp-class b.sig { color: var(--pink); }
+.insp-hint { margin: 0.6rem 0 0; font-size: 0.75rem; }
+.bars { display: grid; gap: 2px; }
+.bar-row { display: grid; grid-template-columns: 1.4rem minmax(0, 1fr) 3.6rem; align-items: center; gap: 0.5rem; }
+.bar-char { font: 600 1.05rem/1.4 var(--say-font); color: var(--text); text-align: center; }
+.bar { height: 0.7rem; min-width: 2px; background: var(--guess); }   /* square ends: it's a pixel world */
+.bar-val { text-align: right; font-variant-numeric: tabular-nums; }
+/* The sampled letter's bar is ink; it's pink only if the pick was signature Anna. */
+.bar { opacity: 0.55; }
+.bar-row.picked .bar { background: var(--text); opacity: 1; }
+.bar-row.picked .bar-char, .bar-row.picked .bar-val { color: var(--text); font-weight: 700; }
+.bars.sig .bar-row.picked .bar { background: var(--pink); }
+.bars.sig .bar-row.picked .bar-char { color: var(--pink); }
+
+/* ---- how it works: one readable column; the formula hides behind [show the math] ---- */
+.about { margin-top: 9rem; padding-top: 2.5rem; border-top: var(--u) solid color-mix(in srgb, var(--muted) 25%, transparent); font-size: 0.92rem; color: var(--muted); }
+.about-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 42rem) minmax(15rem, 19rem);
+  justify-content: space-between;
+  gap: 2.5rem 3.5rem;
+  align-items: start;
+}
+.about-grid .inspector { position: sticky; top: 1.5rem; }
+.about h2 { margin: 0 0 1.25rem; font: 600 max(calc(7 * var(--u)), 1.35rem)/1.2 var(--say-font); color: var(--text); }
+.about h3 { margin: 1.5rem 0 0.4rem; font: 700 0.95rem/1.3 var(--body-font); color: var(--text); }
+.about p { margin: 0 0 0.75rem; }
 .about b { font-weight: 700; color: var(--text); }
-.key { list-style: none; margin: 0 0 1rem; padding: 0; display: grid; gap: 0.3rem; }
-.key .k { display: inline-block; width: 1.4em; font: 600 1.25rem/1 var(--say-font); }
-.key .guess { color: var(--guess); }
-.key .known { color: var(--known); }
-.key .sig { color: var(--pink); }
+.math { margin: 0.25rem 0 0.75rem; }
+.math summary { cursor: pointer; font-weight: 700; color: var(--pink); list-style: none; width: max-content; }
+.math summary::-webkit-details-marker { display: none; }
+.math summary:hover { text-decoration: underline; text-decoration-thickness: var(--u); text-underline-offset: 0.2em; }
+.math[open] summary .show { display: none; }
+.math:not([open]) summary .hide { display: none; }
+.eq-card {
+  margin-top: 0.9rem;
+  padding: calc(6 * var(--u)) calc(7 * var(--u));
+  background: var(--fill);
+  box-shadow:
+    0 calc(-1 * var(--u)) 0 0 var(--ink), 0 var(--u) 0 0 var(--ink),
+    calc(-1 * var(--u)) 0 0 0 var(--ink), var(--u) 0 0 0 var(--ink);
+}
+.eq { margin: 0 0 1rem; font: 400 1.05rem/1.6 var(--body-font); color: var(--text); }
+.eq .nobr { white-space: nowrap; }
+.eq i, .eq-key i { font-style: italic; }
+.frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 0.2em; }
+.frac > span + span { border-top: 1px solid currentColor; }
+.eq-key { display: grid; grid-template-columns: auto 1fr; gap: 0.35rem 0.9rem; margin: 0; font-size: 0.82rem; }
+.eq-key dt { color: var(--text); white-space: nowrap; }
+.eq-key dd { margin: 0; }
 
 /* ---- narrow: Anna on top, bubble below with the tail pointing up ---- */
 @media (max-width: 760px) {
-  :root { --u: 2px; }
-  .stage { grid-template-columns: minmax(0, 1fr); justify-items: center; }
+  :root { --u: 2px; --logo-u: 1.5px; }
+  .stage {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "anna" "speech";
+    justify-items: center;
+  }
   .bubble { margin: calc(14 * var(--u)) calc(2 * var(--u)) 0; width: calc(100% - 4 * var(--u)); }
+  .about { margin-top: 5rem; }
+  .about-grid { grid-template-columns: minmax(0, 1fr); }
+  .about-grid .inspector { position: static; }
+  .speech { justify-self: stretch; }
   .tail-side { display: none; }
   .tail-up { display: block; bottom: 100%; left: calc(50% - var(--tail-center)); }
-  .controls { margin-left: 0; }
 }
+.about-text > h3:first-child { margin-top: 0; }
