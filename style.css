@@ -1,0 +1,207 @@
+/* annagram. Everything pixel-y sits on one grid: --u is one native pixel of the
+   portrait, the logo, the bubble border, and the tail. */
+
+:root {
+  --u: 3px;
+  --sprite: calc(104 * var(--u));             /* anna.png is 104×104 */
+  --cut: 59.615%;                              /* the mouth: row 62 of 104 */
+  --mouth-y: calc(62 * var(--u));
+  --tail-top: calc(3 * var(--u));
+  --tail-center: calc(7.5 * var(--u));         /* middle row of the tail drawn in app.js */
+
+  --room: #f1f1f4;
+  --text: #24242b;
+  --muted: #64646f;
+  --fill: #ffffff;
+  --ink: #24242b;
+  --guess: #b4b4bd;                            /* letters she was guessing */
+  --known: #24242b;                            /* letters from a long stretch of Anna */
+  --pink: #d6187f;                             /* signature Anna */
+  --logo: url("assets/logo-ink.png");
+
+  --body-font: "Courier Prime", "Courier New", monospace;
+  --say-font: "Pixelify Sans", "Courier New", monospace;
+  --say-size: calc(7 * var(--u));
+  --say-line: calc(11 * var(--u));
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --room: #18181c; --text: #e8e8ee; --muted: #9a9aa6; --fill: #232329; --ink: #e8e8ee;
+    --guess: #6b6b78; --known: #e8e8ee; --pink: #ff5fae; --logo: url("assets/logo-pale.png");
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --room: #18181c; --text: #e8e8ee; --muted: #9a9aa6; --fill: #232329; --ink: #e8e8ee;
+  --guess: #6b6b78; --known: #e8e8ee; --pink: #ff5fae; --logo: url("assets/logo-pale.png");
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; background: var(--room); }
+body {
+  margin: 0;
+  background: var(--room);
+  color: var(--text);
+  font: 400 1rem/1.55 var(--body-font);
+}
+main { max-width: 64rem; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+:focus-visible { outline: 2px solid var(--pink); outline-offset: 2px; }
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+/* ---- logo: ink pixel art; the cursor makes the letters shimmer pink (canvas, app.js) ---- */
+.logo { margin: 1rem 0 1.5rem; display: flex; justify-content: center; }
+.logo-img {
+  position: relative;
+  display: block;
+  width: calc(232 * var(--u));
+  max-width: 100%;
+  aspect-ratio: 232 / 45;
+  background: var(--logo) center / contain no-repeat;
+  image-rendering: pixelated;
+  touch-action: pan-y;
+}
+.logo-img canvas {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0 calc(2 * var(--u)) rgb(255 60 160 / 0.55));   /* the glow around lit letters */
+}
+
+/* ---- stage ---- */
+.stage {
+  display: grid;
+  grid-template-columns: var(--sprite) minmax(0, 1fr);
+  column-gap: calc(16 * var(--u));
+  align-items: start;
+}
+
+/* ---- Anna: a cut-out puppet hinged at the mouth ---- */
+.anna { position: relative; width: var(--sprite); height: var(--sprite); cursor: pointer; }
+.skull, .jaw {
+  position: absolute;
+  inset: 0;
+  background: url("assets/anna.png") 0 0 / 100% 100% no-repeat;
+  image-rendering: pixelated;
+}
+.skull { clip-path: inset(0 0 calc(100% - var(--cut) - 1px) 0); transform-origin: 30% var(--cut); }
+.jaw { clip-path: inset(var(--cut) 0 0 0); }
+.mouth {
+  position: absolute;
+  left: 30%; right: 30%;
+  top: calc(var(--cut) - 8 * var(--u));
+  height: calc(10 * var(--u));
+  background: #3a1d24;
+}
+/* Rock on alternating hinges, in hard steps: puppet, not physics. */
+.anna.talk-l .skull { transform-origin: 30% var(--cut); transform: rotate(-8deg); }
+.anna.talk-r .skull { transform-origin: 70% var(--cut); transform: rotate(8deg); }
+@media (prefers-reduced-motion: reduce) {
+  .anna.talk-l .skull, .anna.talk-r .skull { transform: none; }
+}
+
+/* ---- the bubble: pixel border (2 units, notched corners), pixel tail ---- */
+.bubble {
+  position: relative;
+  /* Hang the bubble so the tail's tip lines up with Anna's mouth. */
+  margin: calc(var(--mouth-y) - var(--tail-top) - var(--tail-center)) calc(2 * var(--u)) 0;
+  padding: calc(5 * var(--u)) calc(7 * var(--u));
+  background: var(--fill);
+  box-shadow:
+    0 calc(-2 * var(--u)) 0 0 var(--ink), 0 calc(2 * var(--u)) 0 0 var(--ink),
+    calc(-2 * var(--u)) 0 0 0 var(--ink), calc(2 * var(--u)) 0 0 0 var(--ink);
+}
+.tail { position: absolute; display: block; shape-rendering: crispEdges; overflow: visible; }
+.tail .o { fill: var(--ink); }
+.tail .f { fill: var(--fill); }
+.tail-side { top: var(--tail-top); right: 100%; }
+.tail-up { display: none; }
+
+.output {
+  margin: 0;
+  min-height: calc(2 * var(--say-line));
+  font: 400 var(--say-size)/var(--say-line) var(--say-font);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.given { color: var(--muted); }
+.tok {
+  color: color-mix(in srgb, var(--known) calc(var(--a, 1) * 100%), var(--guess));
+}
+.tok.sparkle { color: var(--pink); }
+.redacted {
+  display: inline-block;
+  width: calc(var(--len, 5) * 0.6em);
+  height: 0.95em;
+  vertical-align: -0.12em;
+  background: var(--text);
+}
+.tok.redacted { color: transparent; background: var(--text); }
+
+/* ---- controls: [rand] and the [given] line ---- */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.75rem 1.5rem;
+  margin: calc(10 * var(--u)) 0 0 calc(var(--sprite) + 16 * var(--u));
+  font: 700 1.05rem/1.2 var(--body-font);   /* the pixel font draws [ ] like ( ) */
+}
+.rand {
+  font: inherit;
+  color: var(--pink);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.rand:hover { text-decoration: underline; text-decoration-thickness: var(--u); text-underline-offset: 0.2em; }
+/* [given]: is a prompt living inside its own underlined line, not a button. */
+.given-line {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 1ch;
+  min-width: 16rem;
+  border-bottom: var(--u) solid var(--guess);
+  padding-bottom: 0.15rem;
+  font-weight: 400;
+  color: var(--muted);
+  cursor: text;
+}
+.given-line:focus-within { border-bottom-color: var(--pink); }
+.given-line input {
+  flex: 1;
+  min-width: 0;
+  font: 400 1rem/1.4 var(--body-font);
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+.given-line input:focus { outline: none; }
+.given-line input::placeholder { color: var(--muted); opacity: 0.6; }
+
+/* ---- how it works ---- */
+.about { max-width: 42rem; margin-top: 4rem; font-size: 0.92rem; color: var(--muted); }
+.about h2 { margin: 0 0 0.75rem; font: 600 calc(7 * var(--u))/1.2 var(--say-font); color: var(--text); }
+.about p { margin: 0 0 1rem; }
+.about b { font-weight: 700; color: var(--text); }
+.key { list-style: none; margin: 0 0 1rem; padding: 0; display: grid; gap: 0.3rem; }
+.key .k { display: inline-block; width: 1.4em; font: 600 1.25rem/1 var(--say-font); }
+.key .guess { color: var(--guess); }
+.key .known { color: var(--known); }
+.key .sig { color: var(--pink); }
+
+/* ---- narrow: Anna on top, bubble below with the tail pointing up ---- */
+@media (max-width: 760px) {
+  :root { --u: 2px; }
+  .stage { grid-template-columns: minmax(0, 1fr); justify-items: center; }
+  .bubble { margin: calc(14 * var(--u)) calc(2 * var(--u)) 0; width: calc(100% - 4 * var(--u)); }
+  .tail-side { display: none; }
+  .tail-up { display: block; bottom: 100%; left: calc(50% - var(--tail-center)); }
+  .controls { margin-left: 0; }
+}

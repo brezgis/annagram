@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>annagram</title>
+  <meta name="description" content="A character-level language model of Anna, trained on her own writing. Runs in your browser.">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <main>
+    <h1 class="logo">
+      <span class="visually-hidden">annagram</span>
+      <span class="logo-img" aria-hidden="true"><canvas id="glitter" width="232" height="45"></canvas></span>
+    </h1>
+
+    <div class="stage">
+      <div class="anna" id="anna" role="button" tabindex="0" aria-label="Pixel portrait of Anna. Click to make her talk.">
+        <div class="mouth"></div>
+        <div class="jaw"></div>
+        <div class="skull"></div>
+      </div>
+
+      <section class="bubble" aria-label="What Anna says">
+        <svg class="tail tail-side" aria-hidden="true"></svg>
+        <svg class="tail tail-up" aria-hidden="true"></svg>
+        <p id="output" class="output" aria-live="polite"></p>
+      </section>
+    </div>
+
+    <div class="controls">
+      <button id="rand" class="rand" type="button">[rand]</button>
+      <label class="given-line">
+        <span>[given]:</span>
+        <input id="prompt" type="text" autocomplete="off" spellcheck="false" placeholder="type a few words, press Enter">
+      </label>
+    </div>
+
+    <section class="about" aria-labelledby="how">
+      <h2 id="how">how it works</h2>
+      <p>annagram is a tiny character-level language model built on my text: an interpolated Kneser–Ney n-gram model trained on about 37,000 words of my messages to coding agents, my notes, and my blog posts. It runs entirely in your browser, and I’ll add more text as I write it.</p>
+      <p>It writes one character at a time. To pick the next one, it looks at the last 9 characters and counts what I’ve typed after exactly those 9. If I’ve rarely written that stretch, it backs off to the last 8, then 7, and so on, blending the counts so it never runs out of ideas. <b>[rand]</b> (or the space bar, or poking me) starts from nothing; type in <b>[given]</b> and it continues from your words.</p>
+      <ul class="key">
+        <li><span class="k guess">a</span> a guess: it had to back off to a short stretch</li>
+        <li><span class="k known">a</span> familiar: I’ve typed those 9 characters before</li>
+        <li><span class="k sig">a</span> signature me: I type that stretch all the time</li>
+      </ul>
+      <p>Before training I scrubbed names, links, and anything personal (the black bars are what got redacted) and pruned long phrases I only wrote once. It also refuses to quote me more than seven words in a row.</p>
+    </section>
+  </main>
+</body>
+</html>
