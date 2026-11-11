@@ -49,6 +49,13 @@
             <input id="prompt" type="text" autocomplete="off" spellcheck="false" placeholder=" " aria-label="Start a sentence and press Enter">
             <span class="cursor" aria-hidden="true">▍</span>
           </label>
+          <div class="order-line" role="group" aria-label="n-gram size">
+            <label class="order-tag" for="order">[n]:</label>
+            <button id="order-down" class="step" type="button" aria-label="Make the n-gram one letter shorter">[-]</button>
+            <input id="order" type="range" min="1" max="10" step="1" value="10" aria-valuetext="10 letters">
+            <button id="order-up" class="step" type="button" aria-label="Make the n-gram one letter longer">[+]</button>
+            <output id="order-val" class="order-val" for="order">10 letters</output>
+          </div>
         </div>
       </div>
     </div>
@@ -60,8 +67,9 @@
       <h3>what it is</h3>
       <p>annagram is a tiny character-level language model built on my text: an interpolated Kneser–Ney n-gram model trained on about 37,000 words of my messages to coding agents, my notes, and my blog posts. It runs entirely in your browser, and I’ll add more text as I write it.</p>
       <h3>how it picks a letter</h3>
-      <p>It writes one character at a time. To pick the next one, it looks at the last 9 characters and counts what I’ve typed after exactly those 9. If I’ve rarely written that stretch, it backs off to the last 8, then 7, and so on, blending the counts so it never runs out of ideas. Gray letters came from a short stretch, solid ones from a familiar one, and pink ones from a stretch I type all the time.</p>
+      <p>It writes one character at a time. <span id="how-pick">To pick the next one, it looks at the last 9 characters and counts what I’ve typed after exactly those 9. If I’ve rarely written that stretch, it backs off to the last 8, then 7, and so on, blending the counts so it never runs out of ideas.</span> Gray letters came from a short stretch, solid ones from a familiar one, and pink ones from a stretch I type all the time.</p>
       <p><b>[rand]</b>, the space bar, or poking me starts from nothing; type in <b>[given]</b> and it continues from your words.</p>
+      <p><b>[n]</b> sets the size of the n-gram, which is how many letters it reads at once, counting the one it is about to pick. At 1 it only knows which letters I use most. Around 4 it makes words that sound like mine, and at 10 it mostly makes sense. It stops at 10 because a longer memory would start reciting me.</p>
       <details class="math">
         <summary><span class="show">[show the math]</span><span class="hide">[hide the math]</span></summary>
         <div class="eq-card">
@@ -72,8 +80,8 @@
           </p>
           <dl class="eq-key">
             <dt><i>c</i></dt><dd>next character</dd>
-            <dt><i>h</i></dt><dd>context: the preceding 9 characters</dd>
-            <dt><i>h′</i></dt><dd><i>h</i> without its first character (order 8, then 7, … down to uniform)</dd>
+            <dt><i>h</i></dt><dd id="eq-ctx">context: the preceding 9 characters</dd>
+            <dt><i>h′</i></dt><dd><i>h</i> without its first character <span id="eq-back">(order 8, then 7, … down to uniform)</span></dd>
             <dt><i>N</i>(<i>hc</i>)</dt><dd>count of <i>hc</i> in the corpus at the top order; at lower orders, the continuation count |{<i>v</i> : <i>N</i>(<i>vhc</i>) &gt; 0}|</dd>
             <dt><i>N</i>(<i>h</i>)</dt><dd>Σ<sub><i>c</i></sub> <i>N</i>(<i>hc</i>)</dd>
             <dt><i>D</i></dt><dd>absolute discount per order, <i>n</i>₁ / (<i>n</i>₁ + 2<i>n</i>₂)</dd>

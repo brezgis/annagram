@@ -3,6 +3,7 @@ import { Model, loadNovelty } from "./engine.js";
 const $ = (sel) => document.querySelector(sel);
 const output = $("#output"), promptEl = $("#prompt"), randBtn = $("#rand");
 const anna = $("#anna");
+const orderEl = $("#order"), orderVal = $("#order-val"), orderDown = $("#order-down"), orderUp = $("#order-up");
 
 const PACE = 48; // ms per letter
 // Linger a little after punctuation, like someone typing rather than a printer.
@@ -14,6 +15,11 @@ const SIGNATURE = 8;
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 
 let model, run = 0, steps = [];
+// The n-gram size on the slider, and what the last speech started from, so that
+// moving the slider can say the same thing again at the new size.
+let order = Number(orderEl.value), lastPrompt = "";
+// With no context at all she never finds a reason to stop, so letter soup gets a shorter leash.
+const SOUP_MAX = 140;
 
 async function getModel() {
   if (model) return model;
@@ -163,6 +169,7 @@ function drawGlow(t) {
 
 async function write(promptText = "") {
   const id = ++run;
+  lastPrompt = promptText;
   output.replaceChildren();
   steps = [];
   let m;
@@ -176,18 +183,22 @@ async function write(promptText = "") {
 
   let lastPick = null;
   $(".controls").dataset.mode = promptText ? "given" : "rand";
-  for (const ev of m.generate(promptText)) {
+  if (id !== run) return; // a newer run started while the model was loading
+  syncOrder();
+  let K = order;
+  for (const ev of m.generate(promptText, { order, maxTokens: order === 1 ? SOUP_MAX : null })) {
     if (id !== run) return; // a newer run took over
+    if (ev.type === "prompt") K = ev.order;
     if (ev.type === "prompt" && promptText) {
       const given = document.createElement("span");
       given.className = "given";
       given.textContent = promptText;
       output.append(given);
     } else if (ev.type === "token") {
-      renderToken(ev);
+      renderToken(ev, K);
       if (ev.id !== 1) {
         talk();
-        lastPick = inspectData(ev);
+        lastPick = inspectData(ev, K);
         drawFigure(lastPick); // the bars twitch along as she types
       }
       if (pace) await new Promise((r) => setTimeout(r, pace * (PAUSE[model.vocab[ev.id]] ?? 1)));
@@ -201,7 +212,7 @@ async function write(promptText = "") {
   }
 }
 
-function renderToken(step) {
+function renderToken(step, K) {
   const nodes = [];
   if (step.id !== 1) { // <eos> prints nothing
     const piece = model.piece(step.id);
@@ -222,11 +233,11 @@ function renderToken(step) {
   const index = steps.length;
   steps.push({ nodes });
   if (step.id !== 1) {
-    const tok = nodes[0], data = inspectData(step);
-    // Hovering shows the whole n-gram: the context h (the 9 letters before) and c itself.
+    const tok = nodes[0], data = inspectData(step, K);
+    // Hovering shows the whole n-gram: the context h (the n − 1 letters before) and c itself.
     const inspect = () => {
       clearInspect();
-      for (let j = Math.max(0, index - (model.order - 1)); j < index; j++) steps[j]?.nodes[0]?.classList.add("in-ctx");
+      for (let j = Math.max(0, index - (K - 1)); j < index; j++) steps[j]?.nodes[0]?.classList.add("in-ctx");
       tok.classList.add("inspected");
       drawFigure(data);
     };
@@ -252,7 +263,7 @@ const figBars = $("#fig-bars"), figMath = $("#fig-math"), figLetter = $("#fig-le
 
 // What the inspector needs from one sampling step: the distribution, the context, and
 // how much of Anna backed the pick (longest matching order k, and N(h_k c) there).
-function inspectData(step) {
+function inspectData(step, K) {
   let count = 0;
   for (const L of step.levels) {
     if (!L.found || L.k !== step.matched) continue;
@@ -260,7 +271,7 @@ function inspectData(step) {
     if (j >= 0) count = L.e.raw[j];
   }
   const kind = isSignature(step) ? "sig" : step.matched >= model.order - 1 ? "known" : "guess";
-  return { id: step.id, p: step.p, ctx: step.ctx, matched: step.matched, count, kind };
+  return { id: step.id, p: step.p, ctx: step.ctx, matched: step.matched, count, kind, order: K };
 }
 const KIND_NAME = { guess: "guess", known: "familiar", sig: "signature" };
 let lastShown = null;
@@ -270,15 +281,18 @@ function shown(id) {
   return piece.redacted ? "▇" : piece.text === " " ? "␣" : piece.text;
 }
 function drawFigure(step) {
-  const ctx = step.ctx.slice(-(model.order - 1)).filter((i) => i > 1);
+  // slice(-0) would return everything, so order 1 (no context) is spelled out.
+  const ctx = step.order > 1 ? step.ctx.slice(-(step.order - 1)).filter((i) => i > 1) : [];
+  const h = step.order === 1 ? "⟨nothing⟩" : ctx.length ? `“${ctx.map(shown).join("")}”` : "⟨start⟩";
   figMath.innerHTML = "";
-  figMath.append("P(c | h = ", Object.assign(document.createElement("b"), { textContent: ctx.length ? `“${ctx.map(shown).join("")}”` : "⟨start⟩" }), ")");
+  figMath.append("P(c | h = ", Object.assign(document.createElement("b"), { textContent: h }), ")");
   figLetter.textContent = shown(step.id);
   figLetter.className = step.kind === "sig" ? "sig" : "";
   figBars.classList.toggle("sig", step.kind === "sig");
   figClass.replaceChildren(
     Object.assign(document.createElement("b"), { className: step.kind, textContent: KIND_NAME[step.kind] }),
-    step.matched > 1 ? ` · seen ${step.count}× as a ${step.matched}-letter n-gram` : " · no context matched");
+    step.matched > 1 ? ` · seen ${step.count}× as a ${step.matched}-letter n-gram`
+      : step.order === 1 ? " · picked by letter frequency alone" : " · no context matched");
   const top = [...step.p.keys()].filter((i) => i !== 0).sort((a, b) => step.p[b] - step.p[a]).slice(0, 6);
   if (!top.includes(step.id)) top[top.length - 1] = step.id; // always show the one she picked
   const max = Math.max(...top.map((i) => step.p[i]));
@@ -305,6 +319,47 @@ output.addEventListener("pointerleave", () => {
   clearInspect();
   if (lastShown) drawFigure(lastShown);
 });
+
+// ---- [n]: the n-gram size ----
+
+const countLabel = (n) => `${n} ${n === 1 ? "letter" : "letters"}`;
+
+// Bring the slider, its label, and the explanation in line with `order`.
+function syncOrder() {
+  const max = model?.order ?? Number(orderEl.max);
+  orderEl.max = max;
+  order = Math.min(Math.max(order, 1), max);
+  orderEl.value = order;
+  orderEl.setAttribute("aria-valuetext", countLabel(order));
+  orderVal.textContent = countLabel(order);
+  orderDown.disabled = order <= 1;
+  orderUp.disabled = order >= max;
+
+  const c = order - 1;
+  $("#how-pick").textContent =
+    order === 1 ? "Right now it looks at nothing before it. It picks each letter by how often I type that letter, which gives you letter soup."
+    : order === 2 ? "To pick the next one, it looks at the last character and counts what I’ve typed right after it. If I’ve never typed anything after that character, it falls back on how often I type each letter."
+    : `To pick the next one, it looks at the last ${c} characters and counts what I’ve typed after exactly those ${c}. If I’ve rarely written that stretch, it backs off to the last ${c - 1}${c - 1 > 1 ? ", then a shorter stretch, and so on" : ""}, blending the counts so it never runs out of ideas.`;
+  $("#eq-ctx").textContent = order === 1 ? "context: empty when n is 1" : `context: the preceding ${c === 1 ? "character" : `${c} characters`}`;
+  $("#eq-back").textContent =
+    c === 0 ? "(nothing is left to drop, so it goes straight to uniform)"
+    : c === 1 ? "(order 1, then uniform)"
+    : c === 2 ? "(order 2, then 1, then uniform)"
+    : `(order ${c}, then ${c - 1}, … down to uniform)`;
+}
+
+// Changing n says the same thing again at the new size, right away.
+function setOrder(n) {
+  n = Math.min(Math.max(Math.round(n), 1), Number(orderEl.max));
+  if (n === order) { syncOrder(); return; }
+  order = n;
+  syncOrder();
+  write(lastPrompt);
+}
+orderEl.addEventListener("input", () => setOrder(Number(orderEl.value)));
+orderDown.addEventListener("click", () => setOrder(order - 1));
+orderUp.addEventListener("click", () => setOrder(order + 1));
+syncOrder();
 
 // ---- wiring ----
 

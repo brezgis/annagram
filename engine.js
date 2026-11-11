@@ -183,14 +183,14 @@ export class Model {
 
   *generate(promptText = "", opts = {}, rng = Math.random) {
     const o = { ...DEFAULTS, ...PER_MODEL[this.name], ...Object.fromEntries(Object.entries(opts).filter(([, v]) => v != null)) };
-    const K = Math.min(o.order ?? this.order, this.order);
+    const K = Math.max(1, Math.min(Math.round(o.order ?? this.order), this.order));
     const prompt = promptText.trim() ? this.encode(promptText) : [];
     const pad = new Array(this.order - 1).fill(BOS);
     const out = []; // { id, matched, levels, p, candidates }
     const bans = new Map(); // position -> Set of banned ids (novelty backtracking)
     let backtracks = 0, lastWordCount = 0, lowStreak = 0;
 
-    yield { type: "prompt", ids: prompt };
+    yield { type: "prompt", ids: prompt, order: K };
 
     while (out.length < o.maxTokens) {
       const ctx = pad.concat(prompt, out.map((t) => t.id));
@@ -240,7 +240,8 @@ export class Model {
       yield { type: "token", index: out.length - 1, ...step };
       if (id === EOS) break;
       lowStreak = matched <= 1 ? lowStreak + 1 : 0;
-      if (o.stall && lowStreak >= o.stall) { yield { type: "stalled" }; break; }
+      // At order 1 nothing ever has more than unigram support, so stalling means nothing there.
+      if (o.stall && K > 1 && lowStreak >= o.stall) { yield { type: "stalled" }; break; }
     }
     yield { type: "done", ids: prompt.concat(out.map((t) => t.id)) };
   }

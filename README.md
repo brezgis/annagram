@@ -6,6 +6,7 @@ the browser. Live at <https://gram.brezgis.com>.
 A pixel version of me talks one letter at a time. Faint letters are guesses, dark ones come from a
 longer stretch of my writing, and pink ones are things I type all the time. Press space, click
 `[rand]`, or poke the portrait to make me talk; type in `[given]:` and I'll continue your words.
+The `[n]:` slider sets the n-gram size from 1 (letter soup) to 10 (the default).
 
 ## How it works
 

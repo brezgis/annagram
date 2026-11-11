@@ -203,6 +203,73 @@ main { max-width: 64rem; margin: 0 auto; padding: 1rem 1rem 4rem; }
 .given-line input { order: 2; }
 .given-line:has(input:placeholder-shown:not(:focus)) .cursor { display: inline; }
 
+/* ---- [n]: the n-gram size, a pixel slider with a step key on each side ---- */
+.order-line {
+  flex: 1 0 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  min-width: 0;
+  font-weight: 400;
+  color: var(--muted);
+}
+.order-tag { font-weight: 700; color: var(--muted); padding: 0.1rem 0; }
+.step {
+  font: 700 1.05rem/1.2 var(--body-font);
+  color: var(--pink);
+  background: none;
+  border: 0;
+  padding: 0.5rem 0.3rem;
+  margin: -0.4rem -0.3rem;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+@media (hover: hover) {
+  .step:hover { text-decoration: underline; text-decoration-thickness: var(--u); text-underline-offset: 0.2em; }
+}
+.step:active { background: var(--pink); color: var(--fill); text-decoration: none; }
+.step:disabled { color: var(--guess); opacity: 0.5; cursor: default; text-decoration: none; background: none; }
+.order-val { flex: none; min-width: 10ch; font: 400 1rem/1.4 var(--body-font); color: var(--text); font-variant-numeric: tabular-nums; }
+.order-line input[type="range"] {
+  -webkit-appearance: none; appearance: none;
+  flex: 1 1 8rem;
+  min-width: 5rem;
+  max-width: 20rem;
+  height: 2.25rem;                 /* a tall hit area around a thin track */
+  margin: -0.5rem 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  touch-action: pan-y;
+  --thumb-w: max(calc(4 * var(--u)), 10px);
+  --thumb-h: max(calc(8 * var(--u)), 20px);
+}
+/* Ten notches, one per order, lined up with where the thumb's center stops. */
+.order-line input[type="range"]::-webkit-slider-runnable-track {
+  height: var(--thumb-h);
+  background:
+    linear-gradient(var(--guess), var(--guess)) center / 100% var(--u) no-repeat,
+    repeating-linear-gradient(to right, var(--guess) 0 var(--u), transparent var(--u) calc((100% - var(--thumb-w)) / 9))
+      calc(var(--thumb-w) / 2 - var(--u) / 2) center / calc(100% - var(--thumb-w) + var(--u)) calc(4 * var(--u)) no-repeat;
+}
+.order-line input[type="range"]::-moz-range-track {
+  height: var(--thumb-h);
+  background:
+    linear-gradient(var(--guess), var(--guess)) center / 100% var(--u) no-repeat,
+    repeating-linear-gradient(to right, var(--guess) 0 var(--u), transparent var(--u) calc((100% - var(--thumb-w)) / 9))
+      calc(var(--thumb-w) / 2 - var(--u) / 2) center / calc(100% - var(--thumb-w) + var(--u)) calc(4 * var(--u)) no-repeat;
+}
+.order-line input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: var(--thumb-w); height: var(--thumb-h);
+  background: var(--pink);
+  border: 0; border-radius: 0;
+}
+.order-line input[type="range"]::-moz-range-thumb {
+  width: var(--thumb-w); height: var(--thumb-h);
+  background: var(--pink);
+  border: 0; border-radius: 0;
+}
 
 /* ---- letter inspector: P(c | h) for the last (or hovered) letter ---- */
 .tok { cursor: crosshair; }
@@ -281,6 +348,11 @@ main { max-width: 64rem; margin: 0 auto; padding: 1rem 1rem 4rem; }
   .about-grid { grid-template-columns: minmax(0, 1fr); }
   .about-grid .inspector { position: static; }
   .speech { justify-self: stretch; }
+  /* [n]: and its value share a row; the slider gets the full width underneath. */
+  .order-line { flex-wrap: wrap; row-gap: 0.5rem; }
+  .order-val { order: 1; flex: 1 0 calc(100% - 5rem); }
+  .order-line .step, .order-line input[type="range"] { order: 2; }
+  .order-line input[type="range"] { max-width: none; }
   .tail-side { display: none; }
   .tail-up { display: block; bottom: 100%; left: calc(50% - var(--tail-center)); }
 }
